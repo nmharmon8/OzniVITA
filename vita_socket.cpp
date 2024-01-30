@@ -117,7 +117,7 @@ int processVRT(uint32_t *b, int size) {
         struct vrt_packet p;
         int32_t rv = vrt_read_packet(b + offset, size, &p, true);
         if (rv == -1){
-            //Buffer too small
+            // if (size < )
             break;
         }
         if (rv < 0) {
@@ -240,6 +240,7 @@ void parseData() {
         }
 
         int offset = processVRT(local_buffer.data(), local_buffer.size());
+
         if (offset > 0 && offset < local_buffer.size()) {
             int remaining = (local_buffer.size() - offset);
             // std::cout << "Remaining: " << remaining << " Offset: " << offset << " Size: " << local_buffer.size() << std::endl;
@@ -256,7 +257,7 @@ void parseData() {
             local_buffer.clear();
         }
         else if (offset == 0 && local_buffer.size() > 40){
-            std::cout << "This should not happen" << std::endl;
+            std::cout << "This should not happen " << offset << " " << local_buffer.size() << std::endl;
         } else if (offset == 0){
             // std::cout << "No data to process" << std::endl;
         } else {

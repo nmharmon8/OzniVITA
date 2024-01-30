@@ -13,8 +13,8 @@ def signal_handler(sig, frame):
     exit()
 
 signal.signal(signal.SIGINT, signal_handler)
-vita_socket_py.run_udp("127.0.0.1", 5002)
-# vita_socket_py.run_tcp("127.0.0.1", 5002)
+# vita_socket_py.run_udp("127.0.0.1", 5002)
+vita_socket_py.run_tcp("127.0.0.1", 5002)
 
 complex16_dtype = np.dtype([("real", '<i2'), ("imag", '<i2')])
 

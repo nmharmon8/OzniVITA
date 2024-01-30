@@ -1,0 +1,56 @@
+
+.. _file__home_emil_libvrt_include_vrt_vrt_write.h:
+
+File vrt_write.h
+================
+
+|exhale_lsh| :ref:`Parent directory <dir__home_emil_libvrt_include_vrt>` (``/home/emil/libvrt/include/vrt``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. contents:: Contents
+   :local:
+   :backlinks: none
+
+Definition (``/home/emil/libvrt/include/vrt/vrt_write.h``)
+----------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_emil_libvrt_include_vrt_vrt_write.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``stdbool.h``
+
+- ``stdint.h``
+
+- ``vrt_util.h`` (:ref:`file__home_emil_libvrt_include_vrt_vrt_util.h`)
+
+
+
+
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_vrt__write_8h_1aa8a41029efa0bf1188898eee5bde11c9`
+
+- :ref:`exhale_function_vrt__write_8h_1a890940821fc194091ec4e1d9f7cb0852`
+
+- :ref:`exhale_function_vrt__write_8h_1aa71729dc0c2da9d768054c9c77112de5`
+
+- :ref:`exhale_function_vrt__write_8h_1aeea41b8293bb188ed6dcf06d4419d41f`
+
+- :ref:`exhale_function_vrt__write_8h_1af1e9bd26febf67e9239cfdcc05dc3ec0`
+

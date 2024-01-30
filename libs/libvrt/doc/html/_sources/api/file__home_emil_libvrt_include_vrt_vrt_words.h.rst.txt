@@ -1,0 +1,63 @@
+
+.. _file__home_emil_libvrt_include_vrt_vrt_words.h:
+
+File vrt_words.h
+================
+
+|exhale_lsh| :ref:`Parent directory <dir__home_emil_libvrt_include_vrt>` (``/home/emil/libvrt/include/vrt``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. contents:: Contents
+   :local:
+   :backlinks: none
+
+Definition (``/home/emil/libvrt/include/vrt/vrt_words.h``)
+----------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_emil_libvrt_include_vrt_vrt_words.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``stdint.h``
+
+
+
+
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_vrt__words_8h_1a8cc41c6688a37ffec6be52baa4eca23b`
+
+- :ref:`exhale_function_vrt__words_8h_1adff2fc2d34c52261a3ebd85559695ca0`
+
+- :ref:`exhale_function_vrt__words_8h_1aa7cb266b18ae3dd0e849a5ec0e4da142`
+
+- :ref:`exhale_function_vrt__words_8h_1a1e0b54c1074eca5a163321d622c8de2b`
+
+
+Variables
+---------
+
+
+- :ref:`exhale_variable_vrt__words_8h_1a541e0edfa3580d3802db81981c6fb8a7`
+
+- :ref:`exhale_variable_vrt__words_8h_1a4b1c2b7216a6c475736a8916f2356486`
+
+- :ref:`exhale_variable_vrt__words_8h_1a03403462eb9cd5829ec720aa91b3ae10`
+
+- :ref:`exhale_variable_vrt__words_8h_1a2f8fa0f6c0217dc4098cea6c8e39e484`
+

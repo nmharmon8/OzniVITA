@@ -1,0 +1,54 @@
+
+.. _program_listing_file__home_emil_libvrt_include_vrt_vrt_write.h:
+
+Program Listing for File vrt_write.h
+====================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file__home_emil_libvrt_include_vrt_vrt_write.h>` (``/home/emil/libvrt/include/vrt/vrt_write.h``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   #ifndef INCLUDE_VRT_VRT_WRITE_H_
+   #define INCLUDE_VRT_VRT_WRITE_H_
+   
+   #include <stdbool.h>
+   #include <stdint.h>
+   
+   #include "vrt_util.h"
+   
+   #ifdef __cplusplus
+   extern "C" {
+   #endif
+   
+   struct vrt_fields;
+   struct vrt_header;
+   struct vrt_if_context;
+   struct vrt_packet;
+   struct vrt_trailer;
+   
+   VRT_WARN_UNUSED
+   int32_t vrt_write_header(const struct vrt_header* header, void* buf, int32_t words_buf, bool validate);
+   
+   VRT_WARN_UNUSED
+   int32_t vrt_write_fields(const struct vrt_header* header,
+                            const struct vrt_fields* fields,
+                            void*                    buf,
+                            int32_t                  words_buf,
+                            bool                     validate);
+   
+   VRT_WARN_UNUSED
+   int32_t vrt_write_trailer(const struct vrt_trailer* trailer, void* buf, int32_t words_buf, bool validate);
+   
+   VRT_WARN_UNUSED
+   int32_t vrt_write_if_context(const struct vrt_if_context* if_context, void* buf, int32_t words_buf, bool validate);
+   
+   VRT_WARN_UNUSED
+   int32_t vrt_write_packet(const struct vrt_packet* packet, void* buf, int32_t words_buf, bool validate);
+   
+   #ifdef __cplusplus
+   }
+   #endif
+   
+   #endif

@@ -1,0 +1,23 @@
+.. libvrt documentation master file, created by sphinx-quickstart on Wed Jun 24 11:46:27 2020.
+
+Welcome to libvrt's documentation!
+======================================================
+
+This is the documentation for *libvrt*, a library for encoding and decoding packets following the ANSI/VITA 49.0 Radio Transport (VRT) standard.
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+Index
+=====
+
+* :ref:`genindex`
+
+API
+===
+
+.. toctree::
+   :maxdepth: 2
+
+   api/library_root
