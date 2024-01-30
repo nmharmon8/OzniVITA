@@ -1,0 +1,6 @@
+[submodule "external/libvrt"]
+	path = external/libvrt
+	url = https://github.com/ember91/libvrt.git
+[submodule "external/pybind11"]
+	path = external/pybind11
+	url = https://github.com/pybind/pybind11.git
