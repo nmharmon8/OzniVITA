@@ -5,9 +5,10 @@ project(vita_socket_py)
 add_subdirectory(external/libvrt)
 add_subdirectory(external/pybind11)
 
-find_package(pybind11 REQUIRED)
-pybind11_add_module(vita_socket_py pybind_vita.cpp)
+# Assuming pybind11 is correctly set up by add_subdirectory
+# find_package(pybind11 REQUIRED) might not be necessary
 
+pybind11_add_module(vita_socket_py pybind_vita.cpp)
 target_link_libraries(vita_socket_py PRIVATE vrt pthread)
 
 # Use Python to find the site-packages directory
@@ -18,8 +19,5 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-# Inform where the module will be installed
 message(STATUS "Installing Python module to ${PYTHON_SITE_PACKAGES}")
-
-# Add install target
 install(TARGETS vita_socket_py LIBRARY DESTINATION ${PYTHON_SITE_PACKAGES})
