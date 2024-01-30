@@ -2,14 +2,14 @@ cmake_minimum_required(VERSION 3.4...3.18)
 project(vita_socket_py)
 
 # Include the submodules
-add_subdirectory(lib/libvrt)
+add_subdirectory(libs/libvrt)
 add_subdirectory(external/pybind11)
 
 # Create the module target
 pybind11_add_module(vita_socket_py pybind_vita.cpp)
 
 # Specify include directories for vita_socket_py
-target_include_directories(vita_socket_py PRIVATE lib/libvrt/include)
+target_include_directories(vita_socket_py PRIVATE libs/libvrt/include)
 
 # Link libraries
 target_link_libraries(vita_socket_py PRIVATE vrt pthread)
