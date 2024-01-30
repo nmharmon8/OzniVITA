@@ -3,7 +3,12 @@ project(vita_socket_py)
 
 # Include the submodules
 add_subdirectory(external/libvrt)
+target_include_directories(vita_socket_py PRIVATE external/libvrt/include)
 add_subdirectory(external/pybind11)
+
+add_dependencies(vita_socket_py vrt)
+add_dependencies(vita_socket_py pybind11)
+
 
 # Assuming pybind11 is correctly set up by add_subdirectory
 # find_package(pybind11 REQUIRED) might not be necessary
