@@ -7,13 +7,13 @@ namespace py = pybind11;
 PYBIND11_MODULE(vita_socket_py, m) {
     m.doc() = "Python bindings for Vita Socket using pybind11";
 
-    py::class_<VitaStreams>(m, "VitaStreams")
+    py::class_<VitaStream>(m, "VitaStream")
         .def(py::init<int>())
-        .def("addPacket", &VitaStreams::addPacket)
-        .def("getPacketData", &VitaStreams::getPacketData)
-        .def("getStreamID", &VitaStreams::getStreamID)
-        .def("getSampleRate", &VitaStreams::getSampleRate)
-        .def("hasContextPacket", &VitaStreams::hasContextPacket);
+        .def("addPacket", &VitaStream::addPacket)
+        .def("getPacketData", &VitaStream::getPacketData)
+        .def("getStreamID", &VitaStream::getStreamID)
+        .def("getSampleRate", &VitaStream::getSampleRate)
+        .def("hasContextPacket", &VitaStream::hasContextPacket);
 
     m.def("addPacketToStream", &addPacketToStream);
     m.def("getStreamIDs", &getStreamIDs);
