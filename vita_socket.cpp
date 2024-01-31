@@ -185,7 +185,8 @@ class VitaSocket {
         
         std::mutex stream_id_mutex;
 
-        std::vector<uint32_t> shared_buffer;
+        // std::vector<uint32_t> shared_buffer;
+        std::vector<uint8_t> shared_buffer;
 
         std::atomic<bool> running;
 
@@ -207,30 +208,57 @@ class VitaSocket {
             streams.at(stream_id).addPacket(packet);
         }
 
-        int processVRT(uint32_t *b, int size) {
+        uint32_t littleEndianToUint32(const std::vector<uint8_t>& vec, size_t index) {
+            return static_cast<uint32_t>(vec[index]) << 24|
+                static_cast<uint32_t>(vec[index + 1]) << 16 |
+                static_cast<uint32_t>(vec[index + 2]) << 8 |
+                static_cast<uint32_t>(vec[index + 3]);
+        }
+
+        int processVRT(std::vector<uint8_t> &local_buffer, int local_buffer_offset) {
+
+            // Only use the valid words e.g 4 bytes
+            int local_buffer_size = local_buffer.size() - local_buffer_offset;
+            local_buffer_size = local_buffer_size - (local_buffer_size % 4);
+
+            // Need to cast local_buffer to unit32_t 
+            // Have to be carefull because the buffer is little endian, but we are on a big endian system
+            std::vector<uint32_t> uint32_vector; 
+            uint32_vector.reserve(local_buffer_size / 4);
+            for (int i = local_buffer_offset; i <= local_buffer_size-4; i += 4) {
+                uint32_vector.push_back(littleEndianToUint32(local_buffer, i));
+            }
+
+            int size = uint32_vector.size();
 
             int32_t offset = 0;
 
             while (offset + 40 < size) {
+                // std::cout << "Main loop" << std::endl;
                 struct vrt_packet p;
-                int32_t rv = vrt_read_packet(b + offset, size, &p, true);
+                // std::cout<< "Offset: " << offset << " Size: " << size << std::endl;
+                int32_t rv = vrt_read_packet(uint32_vector.data() + offset, uint32_vector.size(), &p, true);
                 if (rv == -1){
-                    // if (size < )
                     break;
+                    // if (size - offset < 1000){
+                    //     // Could be buffer is to small or may just be a bad packet
+                    //     break;
+                    // }
+                    // // Shift the buffer by 1 byte and try again
+                    // return (offset * 4) + 1;
                 }
                 if (rv < 0) {
-                    std::cerr << "Failed to parse packet: " << vrt_string_error(rv) << " " << rv << std::endl;
+                    // std::cerr << "Failed to parse packet: " << vrt_string_error(rv) << " " << rv << std::endl;
                     // Shift the buffer by 1 byte and try again
-                    return offset + 1;
+                    return (offset * 4) + 1;
                 }
 
                 // Check if the packet is within the buffer
                 // VRT dose not allways insure that the packet is complete
                 if (rv + offset > size){
-                    std::cout << "Packet size: " << rv << std::endl;
-                    std::cout << "Offset: " << offset << " Size: " << size << std::endl;
-                    // throw std::runtime_error("Total is too large");
-                    return offset + 1;
+                    // std::cout << "Packet size: " << rv << std::endl;
+                    // std::cout << "Offset: " << offset << " Size: " << size << std::endl;
+                    return (offset * 4) + 1;
                 }
 
 
@@ -240,37 +268,36 @@ class VitaSocket {
                 if (p.header.packet_type <= VRT_PT_EXT_DATA_WITH_STREAM_ID){
                     // cast p.body to unit32_t*  
                     uint32_t* body = static_cast<uint32_t*>(p.body);
-                    if (body < b + offset || body + p.words_body > b + size){
-                        std::cout << "Packet size: " << rv << std::endl;
-                        std::cout << "Offset: " << offset << " Size: " << size << std::endl;
-                        return offset + 1;
+                    if (body < uint32_vector.data() + offset || body + p.words_body > uint32_vector.data() + size){
+                        // std::cout << "Packet size: " << rv << std::endl;
+                        // std::cout << "Offset: " << offset << " Size: " << size << std::endl;
+                        return (offset * 4) + 1;
                     }
 
                     if (p.words_body <= 0){
-                        std::cerr << "Packet body size is not valid: " << p.words_body << std::endl; 
-                        return offset + 1;
+                        // std::cerr << "Packet body size is not valid: " << p.words_body << std::endl; 
+                        return (offset * 4) + 1;
                     }
                 }
-
 
                 // Check to make sure that packet.header.packet_count top 4 bits are 0
                 // Only the last 4 bits are used
                 int top_4_bits = p.header.packet_count & 0xF0;
                 if (top_4_bits != 0){
-                    std::cerr << "Packet Count top 4 bits are not 0 they are " << top_4_bits << std::endl;
-                    return offset + 1;
+                    // std::cerr << "Packet Count top 4 bits are not 0 they are " << top_4_bits << std::endl;
+                    return (offset * 4) + 1;
                 }
 
                 if (p.header.packet_type == VRT_PT_IF_CONTEXT) {
                     // Check if the packet is a context packet that is has a positive sample rate
                     if (p.if_context.sample_rate <= 0) {
-                        std::cerr << "Sample rate is not valid" << std::endl;
-                        return offset + 1;
+                        // std::cerr << "Sample rate is not valid" << std::endl;
+                        return (offset * 4) + 1;
                     }
 
                     if (p.body != nullptr){
-                        std::cerr << "Context packet body is not null" << std::endl;
-                        return offset + 1;
+                        // std::cerr << "Context packet body is not null" << std::endl;
+                        return (offset * 4) + 1;
                     }
                 }
 
@@ -282,11 +309,12 @@ class VitaSocket {
                 std::cout << "Offset: " << offset << " Size: " << size << std::endl;
                 throw std::runtime_error("Offset is larger than size");
             }
-            return offset;
+            // std::cout << "Offset: " << offset << " Size: " << size << std::endl;
+            return (offset * 4);
         }
 
         void print_info() {
-            std::cout << "Vita Socket INFO:" << std::endl;
+            std::cout << "Vita Socket INFO shared buffer size " << shared_buffer.size() << std::endl;
             std::cout << "Stream Count: " << streams.size() << std::endl;
             for (const auto& stream : streams) {
                 if (stream.second.getSampleRate() > 0){
@@ -296,13 +324,13 @@ class VitaSocket {
         }
 
         void parseData() {
-            std::vector<uint32_t> local_buffer;
+            std::vector<uint8_t> local_buffer;
             local_buffer.reserve(buffer_size);
-
+            int local_buffer_offset = 0;
             clock_t last_print = clock();
 
 
-            int last_shared_buffer_size = 0;
+        
 
             while (running) {
 
@@ -326,16 +354,33 @@ class VitaSocket {
                     lock.unlock();
                 }
 
-                int offset = processVRT(local_buffer.data(), local_buffer.size());
+                int offset = processVRT(local_buffer, local_buffer_offset);
+                offset += local_buffer_offset;
 
                 if (offset > 0 && offset < local_buffer.size()) {
                     int remaining = (local_buffer.size() - offset);
+
+                    
+                    if (remaining > 2000){
+                        // Only do copy if we have aligned to the packet boundary
+                        // Otherwise we will have to shift large amounts of data
+                        // One byte at a time
+                        local_buffer_offset = offset;
+                    } else {
+                        std::copy(local_buffer.end() - remaining, local_buffer.end(), local_buffer.begin());
+                        local_buffer.resize(remaining);
+                        local_buffer_offset = 0;
+                    }
+
+
+                    
                     // std::cout << "Remaining: " << remaining << " Offset: " << offset << " Size: " << local_buffer.size() << std::endl;
                     // std::cout << "Last value: " << local_buffer[local_buffer.size() - 1] << std::endl;
-                    std::copy(local_buffer.end() - remaining, local_buffer.end(), local_buffer.begin());
-                    local_buffer.resize(remaining);
+                    
+                    
                     // std::cout << "Buffer size: " << local_buffer.size() << std::endl;
                     // std::cout << "Last value: " << local_buffer[local_buffer.size() - 1] << std::endl;
+          
                 } else if (offset == -1) {
                     // std::cerr << "Clearing buffer due to failure to parse packet" << std::endl;
                     local_buffer.clear();
@@ -343,8 +388,8 @@ class VitaSocket {
                     // std::cout << "Clearing local_buffer buffer " << offset << " " << local_buffer.size() << std::endl;
                     local_buffer.clear();
                 }
-                else if (offset == 0 && local_buffer.size() > 40){
-                    std::cout << "This should not happen " << offset << " " << local_buffer.size() << std::endl;
+                else if (offset == 0 && local_buffer.size() > 160){
+                    // std::cout << "This should not happen " << offset << " " << local_buffer.size() << std::endl;
                 } else if (offset == 0){
                     // std::cout << "No data to process" << std::endl;
                 } else {
@@ -358,38 +403,38 @@ class VitaSocket {
             uint8_t buffer[buffer_size];
             socklen_t len = sizeof(servaddr);
 
-            int offset = 0;
+            // int offset = 0;
 
             while (running) {
-                int n = recv(sockfd, buffer + offset, buffer_size - offset, 0);
+                int n = recv(sockfd, buffer, buffer_size, 0);
                 if (n < 0) {
                     perror("recvfrom failed");
                     exit(EXIT_FAILURE);
                 }
 
-                n += offset;
+                // n += offset;
 
-                int remaining = n % 4;
+                // int remaining = n % 4;
 
-                n = n - remaining;
+                // n = n - remaining;
 
-                // Endian conversion
-                for (int i = 0; i < n; i += 4) {
-                    std::swap(buffer[i], buffer[i + 3]);
-                    std::swap(buffer[i + 1], buffer[i + 2]);
-                }
+                // // Endian conversion
+                // for (int i = 0; i < n; i += 4) {
+                //     std::swap(buffer[i], buffer[i + 3]);
+                //     std::swap(buffer[i + 1], buffer[i + 2]);
+                // }
 
                 std::unique_lock<std::mutex> lock(buffer_mutex);
-                size_t num_uint32_elements = n / sizeof(uint32_t);
+                // size_t num_uint32_elements = n / sizeof(uint32_t);
 
-                shared_buffer.resize(shared_buffer.size() + num_uint32_elements); // Resize the vector
-                std::memcpy(shared_buffer.data() + shared_buffer.size() - num_uint32_elements, buffer, n);
+                shared_buffer.resize(shared_buffer.size() + n); // Resize the vector
+                std::memcpy(shared_buffer.data() + shared_buffer.size() - n, buffer, n);
                 lock.unlock();
 
-                if (remaining > 0) {
-                    std::memcpy(buffer, buffer + n, remaining);
-                }
-                offset = remaining;
+                // if (remaining > 0) {
+                //     std::memcpy(buffer, buffer + n, remaining);
+                // }
+                // offset = remaining;
             }
             close(sockfd);
         }
