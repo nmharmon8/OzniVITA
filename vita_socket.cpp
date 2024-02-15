@@ -5,6 +5,8 @@
 #include <mutex>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <ostream>
+#include <string>
 #include <cstring>
 #include <atomic>
 #include <time.h>
@@ -13,7 +15,6 @@
 #include <vrt/vrt_string.h>
 #include <vrt/vrt_types.h>
 #include <vrt/vrt_util.h>
-
 
 
 
@@ -43,7 +44,7 @@ public:
     std::vector<std::vector<uint8_t>> getPacketData() {
         std::lock_guard<std::mutex> lock(stream_mutex);
         //Copy packet data for return and clear the packet data
-        std::cout << "Packet size: " << packet_data.size() << std::endl;
+        // std::cout << "Packet size: " << packet_data.size() << std::endl;
         std::vector<std::vector<uint8_t>> data(packet_data);
         packet_data.clear();
         packets.clear();
@@ -65,6 +66,10 @@ public:
 
     bool hasContextPacket() const {
         return context_packet.header.packet_type == VRT_PT_IF_CONTEXT;
+    }
+
+    double getFrequency() const {
+        return context_packet.if_context.rf_reference_frequency_offset + context_packet.if_context.if_reference_frequency;
     }
 
 private:
@@ -248,7 +253,7 @@ class VitaSocket {
                     // return (offset * 4) + 1;
                 }
                 if (rv < 0) {
-                    // std::cerr << "Failed to parse packet: " << vrt_string_error(rv) << " " << rv << std::endl;
+                    std::cerr << "Failed to parse packet: " << vrt_string_error(rv) << " " << rv << std::endl;
                     // Shift the buffer by 1 byte and try again
                     return (offset * 4) + 1;
                 }
@@ -256,7 +261,7 @@ class VitaSocket {
                 // Check if the packet is within the buffer
                 // VRT dose not allways insure that the packet is complete
                 if (rv + offset > size){
-                    // std::cout << "Packet size: " << rv << std::endl;
+                    std::cout << "Packet size: " << rv << std::endl;
                     // std::cout << "Offset: " << offset << " Size: " << size << std::endl;
                     return (offset * 4) + 1;
                 }
@@ -269,13 +274,13 @@ class VitaSocket {
                     // cast p.body to unit32_t*  
                     uint32_t* body = static_cast<uint32_t*>(p.body);
                     if (body < uint32_vector.data() + offset || body + p.words_body > uint32_vector.data() + size){
-                        // std::cout << "Packet size: " << rv << std::endl;
-                        // std::cout << "Offset: " << offset << " Size: " << size << std::endl;
+                        std::cout << "Packet size: " << rv << std::endl;
+                        std::cout << "Offset: " << offset << " Size: " << size << std::endl;
                         return (offset * 4) + 1;
                     }
 
                     if (p.words_body <= 0){
-                        // std::cerr << "Packet body size is not valid: " << p.words_body << std::endl; 
+                        std::cerr << "Packet body size is not valid: " << p.words_body << std::endl; 
                         return (offset * 4) + 1;
                     }
                 }
@@ -284,19 +289,19 @@ class VitaSocket {
                 // Only the last 4 bits are used
                 int top_4_bits = p.header.packet_count & 0xF0;
                 if (top_4_bits != 0){
-                    // std::cerr << "Packet Count top 4 bits are not 0 they are " << top_4_bits << std::endl;
+                    std::cerr << "Packet Count top 4 bits are not 0 they are " << top_4_bits << std::endl;
                     return (offset * 4) + 1;
                 }
 
                 if (p.header.packet_type == VRT_PT_IF_CONTEXT) {
                     // Check if the packet is a context packet that is has a positive sample rate
                     if (p.if_context.sample_rate <= 0) {
-                        // std::cerr << "Sample rate is not valid" << std::endl;
+                        std::cerr << "Sample rate is not valid" << std::endl;
                         return (offset * 4) + 1;
                     }
 
                     if (p.body != nullptr){
-                        // std::cerr << "Context packet body is not null" << std::endl;
+                        std::cerr << "Context packet body is not null" << std::endl;
                         return (offset * 4) + 1;
                     }
                 }
@@ -314,13 +319,24 @@ class VitaSocket {
         }
 
         void print_info() {
-            std::cout << "Vita Socket INFO shared buffer size " << shared_buffer.size() << std::endl;
-            std::cout << "Stream Count: " << streams.size() << std::endl;
+            // std::cout << "Vita Socket INFO shared buffer size " << shared_buffer.size() << std::endl;
+            // std::cout << "Stream Count: " << streams.size() << std::endl;
+            // for (const auto& stream : streams) {
+            //     if (stream.second.getSampleRate() > 0){
+            //         std::cout << "Stream ID: " << stream.first << " Sample Rate: " << stream.second.getSampleRate() << " Packet Count: " << stream.second.getPacketCount() << std::endl;
+            //     }
+            // }
+
+            // Rather then printing line by line lets build the data and then print it
+            std::string data;
+            data += "C++: Vita Socket INFO shared buffer size " + std::to_string(shared_buffer.size()) + "\n";
+            data += "C++: Stream Count: " + std::to_string(streams.size()) + "\n";
             for (const auto& stream : streams) {
                 if (stream.second.getSampleRate() > 0){
-                    std::cout << "Stream ID: " << stream.first << " Sample Rate: " << stream.second.getSampleRate() << " Packet Count: " << stream.second.getPacketCount() << std::endl;
+                    data += "   C++: Stream ID: " + std::to_string(stream.first) + " Sample Rate: " + std::to_string(stream.second.getSampleRate()) + " Packet Count: " + std::to_string(stream.second.getPacketCount()) + "\n";
                 }
             }
+            std::cout << data << std::flush;
         }
 
         void parseData() {
@@ -334,7 +350,7 @@ class VitaSocket {
 
             while (running) {
 
-                if (clock() - last_print > CLOCKS_PER_SEC) {
+                if (clock() - last_print > CLOCKS_PER_SEC*5) {
                     last_print = clock();
                     print_info();
                 }
@@ -382,16 +398,16 @@ class VitaSocket {
                     // std::cout << "Last value: " << local_buffer[local_buffer.size() - 1] << std::endl;
           
                 } else if (offset == -1) {
-                    // std::cerr << "Clearing buffer due to failure to parse packet" << std::endl;
+                    std::cerr << "Clearing buffer due to failure to parse packet" << std::endl;
                     local_buffer.clear();
                 } else if (offset == local_buffer.size()) {
-                    // std::cout << "Clearing local_buffer buffer " << offset << " " << local_buffer.size() << std::endl;
+                    std::cout << "Clearing local_buffer buffer " << offset << " " << local_buffer.size() << std::endl;
                     local_buffer.clear();
                 }
                 else if (offset == 0 && local_buffer.size() > 160){
-                    // std::cout << "This should not happen " << offset << " " << local_buffer.size() << std::endl;
+                    std::cout << "This should not happen " << offset << " " << local_buffer.size() << std::endl;
                 } else if (offset == 0){
-                    // std::cout << "No data to process" << std::endl;
+                    std::cout << "No data to process" << std::endl;
                 } else {
                     std::cerr << "Unknown error  Offset: " << offset << " Size: " << local_buffer.size() << std::endl;
                     local_buffer.clear();

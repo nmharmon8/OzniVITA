@@ -13,7 +13,8 @@ PYBIND11_MODULE(vita_socket, m) {
         .def("getPacketData", &VitaStream::getPacketData)
         .def("getStreamID", &VitaStream::getStreamID)
         .def("getSampleRate", &VitaStream::getSampleRate)
-        .def("hasContextPacket", &VitaStream::hasContextPacket);
+        .def("hasContextPacket", &VitaStream::hasContextPacket)
+        .def("getFrequency", &VitaStream::getFrequency);
 
     py::class_<VitaSocket>(m, "VitaSocket")
         .def(py::init<int>())
