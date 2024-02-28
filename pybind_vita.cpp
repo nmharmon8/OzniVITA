@@ -17,7 +17,7 @@ PYBIND11_MODULE(vita_socket, m) {
         .def("getFrequency", &VitaStream::getFrequency);
 
     py::class_<VitaSocket>(m, "VitaSocket")
-        .def(py::init<int>())
+        .def(py::init<int, bool>())
         .def("stop_vita_socket", &VitaSocket::stop_vita_socket)
         .def("getStreamIDs", &VitaSocket::getStreamIDs)
         .def("getStream", &VitaSocket::getStream, py::return_value_policy::reference)

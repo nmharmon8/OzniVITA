@@ -20,7 +20,7 @@
 
 class VitaStream {
 public:
-    VitaStream(int id) : stream_id(id) {
+    VitaStream(int id, size_t max_packets = 1000000) : stream_id(id), max_packets(max_packets) {
         packets.reserve(100000);
     }
 
@@ -38,6 +38,14 @@ public:
             auto* bytePtr = static_cast<uint8_t*>(packet.body); // Convert void* to uint8_t*
             std::vector<uint8_t> data = std::vector<uint8_t>(bytePtr, bytePtr + packet.words_body * 4);
             packet_data.push_back(data);
+
+            if (packets.size() > max_packets) {
+                // If we have more than max_packets then remove the oldest packet
+                // We will remove half the packets
+                packets.erase(packets.begin(), packets.begin() + packets.size() / 2);
+                std::cout << "C++ Dropped packets, remaining:  " << packets.size() << std::endl;
+                std::flush(std::cout);
+            }
         }
     }
 
@@ -76,6 +84,7 @@ private:
     std::vector<vrt_packet> packets;
     std::vector<std::vector<uint8_t>> packet_data;
     int stream_id;
+    int max_packets;
     std::mutex stream_mutex;
     vrt_packet context_packet;
 };
@@ -85,7 +94,7 @@ class VitaSocket {
 
     public:
 
-        VitaSocket(int buffer_size) : buffer_size(buffer_size), running(true) {
+        VitaSocket(int buffer_size, bool little_endian=true) : buffer_size(buffer_size), little_endian(true), running(true) {
             shared_buffer.reserve(buffer_size);
         }
 
@@ -186,6 +195,8 @@ class VitaSocket {
 
         int buffer_size;
 
+        bool little_endian;
+
         std::mutex buffer_mutex;
         
         std::mutex stream_id_mutex;
@@ -226,13 +237,21 @@ class VitaSocket {
             int local_buffer_size = local_buffer.size() - local_buffer_offset;
             local_buffer_size = local_buffer_size - (local_buffer_size % 4);
 
-            // Need to cast local_buffer to unit32_t 
-            // Have to be carefull because the buffer is little endian, but we are on a big endian system
+            
             std::vector<uint32_t> uint32_vector; 
             uint32_vector.reserve(local_buffer_size / 4);
-            for (int i = local_buffer_offset; i <= local_buffer_size-4; i += 4) {
-                uint32_vector.push_back(littleEndianToUint32(local_buffer, i));
+
+            if (little_endian){
+                // Need to cast local_buffer to unit32_t 
+                // Have to be carefull because the buffer is little endian, but we are on a big endian system
+                for (int i = local_buffer_offset; i <= local_buffer_size-4; i += 4) {
+                    uint32_vector.push_back(littleEndianToUint32(local_buffer, i));
+                }
+            } else {
+                // We are on a big endian system so we can just cast the buffer to uint32_t
+                uint32_vector = std::vector<uint32_t>(reinterpret_cast<uint32_t*>(local_buffer.data() + local_buffer_offset), reinterpret_cast<uint32_t*>(local_buffer.data() + local_buffer_size));
             }
+            
 
             int size = uint32_vector.size();
 
@@ -319,14 +338,6 @@ class VitaSocket {
         }
 
         void print_info() {
-            // std::cout << "Vita Socket INFO shared buffer size " << shared_buffer.size() << std::endl;
-            // std::cout << "Stream Count: " << streams.size() << std::endl;
-            // for (const auto& stream : streams) {
-            //     if (stream.second.getSampleRate() > 0){
-            //         std::cout << "Stream ID: " << stream.first << " Sample Rate: " << stream.second.getSampleRate() << " Packet Count: " << stream.second.getPacketCount() << std::endl;
-            //     }
-            // }
-
             // Rather then printing line by line lets build the data and then print it
             std::string data;
             data += "C++: Vita Socket INFO shared buffer size " + std::to_string(shared_buffer.size()) + "\n";
@@ -388,15 +399,6 @@ class VitaSocket {
                         local_buffer_offset = 0;
                     }
 
-
-                    
-                    // std::cout << "Remaining: " << remaining << " Offset: " << offset << " Size: " << local_buffer.size() << std::endl;
-                    // std::cout << "Last value: " << local_buffer[local_buffer.size() - 1] << std::endl;
-                    
-                    
-                    // std::cout << "Buffer size: " << local_buffer.size() << std::endl;
-                    // std::cout << "Last value: " << local_buffer[local_buffer.size() - 1] << std::endl;
-          
                 } else if (offset == -1) {
                     std::cerr << "Clearing buffer due to failure to parse packet" << std::endl;
                     local_buffer.clear();
@@ -428,29 +430,10 @@ class VitaSocket {
                     exit(EXIT_FAILURE);
                 }
 
-                // n += offset;
-
-                // int remaining = n % 4;
-
-                // n = n - remaining;
-
-                // // Endian conversion
-                // for (int i = 0; i < n; i += 4) {
-                //     std::swap(buffer[i], buffer[i + 3]);
-                //     std::swap(buffer[i + 1], buffer[i + 2]);
-                // }
-
                 std::unique_lock<std::mutex> lock(buffer_mutex);
-                // size_t num_uint32_elements = n / sizeof(uint32_t);
-
                 shared_buffer.resize(shared_buffer.size() + n); // Resize the vector
                 std::memcpy(shared_buffer.data() + shared_buffer.size() - n, buffer, n);
                 lock.unlock();
-
-                // if (remaining > 0) {
-                //     std::memcpy(buffer, buffer + n, remaining);
-                // }
-                // offset = remaining;
             }
             close(sockfd);
         }
