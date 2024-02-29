@@ -403,7 +403,7 @@ class VitaSocket {
                     std::cerr << "Clearing buffer due to failure to parse packet" << std::endl;
                     local_buffer.clear();
                 } else if (offset == local_buffer.size()) {
-                    std::cout << "Clearing local_buffer buffer " << offset << " " << local_buffer.size() << std::endl;
+                    // std::cout << "Clearing local_buffer buffer " << offset << " " << local_buffer.size() << std::endl;
                     local_buffer.clear();
                 }
                 else if (offset == 0 && local_buffer.size() > 160){
