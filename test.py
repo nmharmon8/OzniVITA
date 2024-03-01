@@ -1,62 +1,65 @@
-import sys
-import signal
 import time
 
-import numpy as np
-from matplotlib import pyplot as plt
+from vita_socket import VitaSocket
 
-# sys.path.append('/Airborne/jj/jibberjabber/vrt/build')
-import vita_socket_py
 
-def signal_handler(sig, frame):
-    vita_socket_py.stop_vita_socket()
-    exit()
+HOST = '127.0.0.1'
+PORT = 5002
+MOD = 'tcp'
 
-signal.signal(signal.SIGINT, signal_handler)
-# vita_socket_py.run_udp("127.0.0.1", 5002)
-vita_socket_py.run_tcp("127.0.0.1", 5002)
 
-complex16_dtype = np.dtype([("real", '<i2'), ("imag", '<i2')])
+class VitaSocketWrapper:
+    def __init__(self, host, port, buffer_size=2048, socket_mod='udp', little_endin=True):
+        self.vita_socket = VitaSocket(buffer_size, little_endin)
+        self.socket_mod = socket_mod
+        self.host = host
+        self.port = port
 
-i = 0
-while True:
-    stream_ids = vita_socket_py.getStreamIDs()
-    print("Stream IDs:", stream_ids)
+
+    def run_with_retry(self, run_fn):
+        while True:
+            try:
+                run_fn(self.host, self.port)
+                break
+            except Exception as e:
+                print(f"Error: {e}")
+                time.sleep(1)
+
+
+    def run(self):
+        if self.socket_mod.lower() == 'udp':
+            self.run_with_retry(self.vita_socket.run_udp)
+        elif self.socket_mod.lower() == 'tcp':
+            self.run_with_retry(self.vita_socket.run_tcp)
+        else:
+            raise ValueError(f"Invalid socket mod {self.socket_mod}")
+        
+
+    def getStreamIDs(self):
+        return self.vita_socket.getStreamIDs()
     
-    for stream_id in stream_ids:
-
-        stream = vita_socket_py.getStream(stream_id)
-
-        if stream.hasContextPacket():
-            
-
-            sample_rate = vita_socket_py.getStream(stream_id).getSampleRate()
-
-            data = vita_socket_py.getStream(stream_id).getPacketData()
-            signals = []
-            for packet_data in data:
-                packet_data = bytes(packet_data)
-                packet_data = np.frombuffer(packet_data, dtype=complex16_dtype)
-                packet_data = packet_data['real'] + 1j*packet_data['imag']
-                signals.append(packet_data)
-            if len(signals) == 0:
-                continue
-            signals = np.concatenate(signals)
-            print(f"Data {len(signals) / sample_rate} seconds of data")
-            # fig, ax = plt.subplots()
-            # ax.specgram(signals, Fs=sample_rate)
-            # ax.set_xlabel("Time (s)")
-            # ax.set_ylabel("Frequency (Hz)")
-            # ax.set_title(f"Stream ID {stream_id}")
-            # plt.savefig(f"stream_id_{stream_id}_{i}.png")
-            # plt.close()
-            i += 1
-            
-
-
-    time.sleep(1)
+    def getStream(self, stream_id):
+        return self.vita_socket.getStream(stream_id)
 
 
 
-    # g++ vita_socket.cpp -lvrt -lpthread -o vita_socket
-    # cd build/; make; cd ../; python test.py
+def main():
+
+    vita_socket = VitaSocketWrapper(HOST, PORT, socket_mod=MOD)
+    vita_socket.run()
+
+    while True:
+
+        for stream_id in vita_socket.getStreamIDs():
+            stream = vita_socket.getStream(stream_id)
+
+            if stream.hasContextPacket():
+                sample_rate = stream.getSampleRate()
+                data = stream.getPacketData()
+                print(f"Stream ID: {stream_id}, Sample Rate: {sample_rate}, Data: {len(data)}")
+
+        time.sleep(0.1)
+
+
+if __name__ == "__main__":
+    main()

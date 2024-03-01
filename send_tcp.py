@@ -16,9 +16,14 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
     s.listen()
 
+    conn, addr = s.accept()
+
     while True:
 
-        conn, addr = s.accept()
+        
+        conn.sendall(data)
+        time.sleep(0.5)
+        continue
 
         send_chunk_size = 123
         sleep = 1.0 / (len(data) / send_chunk_size)

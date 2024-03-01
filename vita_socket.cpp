@@ -40,11 +40,9 @@ public:
             packet_data.push_back(data);
 
             if (packets.size() > max_packets) {
-                // If we have more than max_packets then remove the oldest packet
-                // We will remove half the packets
-                packets.erase(packets.begin(), packets.begin() + packets.size() / 2);
-                std::cout << "C++ Dropped packets, remaining:  " << packets.size() << std::endl;
-                std::flush(std::cout);
+                packets.clear();
+                packet_data.clear();
+                std::cout << "C++ Dropped packets" << std::endl << std::flush;
             }
         }
     }
@@ -403,7 +401,6 @@ class VitaSocket {
                     std::cerr << "Clearing buffer due to failure to parse packet" << std::endl;
                     local_buffer.clear();
                 } else if (offset == local_buffer.size()) {
-                    // std::cout << "Clearing local_buffer buffer " << offset << " " << local_buffer.size() << std::endl;
                     local_buffer.clear();
                 }
                 else if (offset == 0 && local_buffer.size() > 160){
@@ -421,7 +418,7 @@ class VitaSocket {
             uint8_t buffer[buffer_size];
             socklen_t len = sizeof(servaddr);
 
-            // int offset = 0;
+            int buffers_per_gb = 1000000000 / buffer_size;
 
             while (running) {
                 int n = recv(sockfd, buffer, buffer_size, 0);
@@ -431,6 +428,15 @@ class VitaSocket {
                 }
 
                 std::unique_lock<std::mutex> lock(buffer_mutex);
+
+                // Check if shared buffer is larger than 1GB the buffer size
+                // If it is then we are not processing the data fast enough
+                // So we will drop the data
+                if (shared_buffer.size() > (buffers_per_gb * buffer_size)){
+                    std::cerr << "O" << std::endl << std::flush;
+                    shared_buffer.clear();
+                }
+
                 shared_buffer.resize(shared_buffer.size() + n); // Resize the vector
                 std::memcpy(shared_buffer.data() + shared_buffer.size() - n, buffer, n);
                 lock.unlock();
@@ -445,8 +451,8 @@ int main() {
 
     VitaSocket vita_socket(2048);
 
-    // vita_socket.run_tcp("127.0.0.1", 5002);
-    vita_socket.run_udp("127.0.0.1", 5002);
+    vita_socket.run_tcp("127.0.0.1", 5002);
+    // vita_socket.run_udp("127.0.0.1", 5002);
 
 
     // Get the data every second
