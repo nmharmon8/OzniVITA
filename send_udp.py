@@ -14,14 +14,17 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
 
     while True:
 
-        send_chunk_size = 123
-        sleep = 1.0 / (len(data) / send_chunk_size)
+        send_chunk_size = 128 * 6
+        sleep = 17.0 / (len(data) / send_chunk_size)
+        # sleep /= 10
 
         while True:
-
             for i in range(0, len(data), send_chunk_size):
                 s.sendto(data[i:i + send_chunk_size], socket_addr)
+                # time.sleep(0.0000000001)
                 time.sleep(sleep)
+
+            # time.sleep(0.5)
 
         
            

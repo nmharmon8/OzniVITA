@@ -63,18 +63,22 @@ public:
     }
 
     int getSampleRate() const {
+        std::lock_guard<std::mutex> lock(stream_mutex);
         return 0 == context_packet.if_context.sample_rate ? 0 : context_packet.if_context.sample_rate;
     }
 
     int getPacketCount() const {
+        std::lock_guard<std::mutex> lock(stream_mutex);
         return packets.size();
     }
 
     bool hasContextPacket() const {
+        std::lock_guard<std::mutex> lock(stream_mutex);
         return context_packet.header.packet_type == VRT_PT_IF_CONTEXT;
     }
 
     double getFrequency() const {
+        std::lock_guard<std::mutex> lock(stream_mutex);
         return context_packet.if_context.rf_reference_frequency_offset + context_packet.if_context.if_reference_frequency;
     }
 
@@ -83,7 +87,7 @@ private:
     std::vector<std::vector<uint8_t>> packet_data;
     int stream_id;
     int max_packets;
-    std::mutex stream_mutex;
+    mutable std::mutex stream_mutex;
     vrt_packet context_packet;
 };
 
@@ -212,6 +216,13 @@ class VitaSocket {
         void addPacketToStream(int stream_id, const vrt_packet& packet) {
             std::lock_guard<std::mutex> lock(stream_id_mutex);
             if (streams.find(stream_id) == streams.end()) {
+
+
+                // only create new stream if the packet is not a context packet
+                if (packet.header.packet_type == VRT_PT_IF_CONTEXT) {
+                    return;
+                }
+
                 // Doing a no copy emplace
                 streams.emplace(std::piecewise_construct, 
                 std::forward_as_tuple(stream_id), 
@@ -403,10 +414,10 @@ class VitaSocket {
                 } else if (offset == local_buffer.size()) {
                     local_buffer.clear();
                 }
-                else if (offset == 0 && local_buffer.size() > 160){
+                else if (offset == 0 && local_buffer.size() > 300){
                     std::cout << "This should not happen " << offset << " " << local_buffer.size() << std::endl;
                 } else if (offset == 0){
-                    std::cout << "No data to process" << std::endl;
+                    // std::cout << "No data to process" << std::endl;
                 } else {
                     std::cerr << "Unknown error  Offset: " << offset << " Size: " << local_buffer.size() << std::endl;
                     local_buffer.clear();
@@ -449,10 +460,10 @@ int main() {
     // run_tcp("127.0.0.1", 5002);
     // run_udp("127.0.0.1", 5002);
 
-    VitaSocket vita_socket(2048);
+    VitaSocket vita_socket(20000);
 
-    vita_socket.run_tcp("127.0.0.1", 5002);
     // vita_socket.run_udp("127.0.0.1", 5002);
+    vita_socket.run_tcp("127.0.0.1", 5002);
 
 
     // Get the data every second

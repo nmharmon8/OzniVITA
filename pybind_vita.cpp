@@ -7,14 +7,24 @@ namespace py = pybind11;
 PYBIND11_MODULE(vita_socket, m) {
     m.doc() = "Python bindings for Vita Socket using pybind11";
 
+    // py::class_<VitaStream>(m, "VitaStream")
+    //     .def(py::init<int>())
+    //     .def("addPacket", &VitaStream::addPacket)
+    //     .def("getPacketData", &VitaStream::getPacketData)
+    //     .def("getStreamID", &VitaStream::getStreamID)
+    //     .def("getSampleRate", &VitaStream::getSampleRate)
+    //     .def("hasContextPacket", &VitaStream::hasContextPacket)
+    //     .def("getFrequency", &VitaStream::getFrequency);
+
     py::class_<VitaStream>(m, "VitaStream")
-        .def(py::init<int>())
+        .def(py::init<int, size_t>()) // Assuming you want to expose the max_packets parameter to Python as well
         .def("addPacket", &VitaStream::addPacket)
         .def("getPacketData", &VitaStream::getPacketData)
         .def("getStreamID", &VitaStream::getStreamID)
-        .def("getSampleRate", &VitaStream::getSampleRate)
+        .def("getSampleRate", &VitaStream::getSampleRate) // No change needed here
         .def("hasContextPacket", &VitaStream::hasContextPacket)
         .def("getFrequency", &VitaStream::getFrequency);
+
 
     py::class_<VitaSocket>(m, "VitaSocket")
         .def(py::init<int, bool>())
