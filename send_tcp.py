@@ -1,12 +1,13 @@
 
 import socket
 import time
+from tqdm import tqdm
 
 with open("/md1/jibber_jabber_data/jibber_jabber_test_data/rooftop/dev_100MHz_MB_92pt5_488kHz.vrt", "rb") as f:
     data = f.read()
 
 
-socket_addr = ('localhost', 5002)
+socket_addr = ('localhost', 5003)
 
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -21,16 +22,16 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     while True:
 
         
-        conn.sendall(data)
-        time.sleep(0.5)
-        continue
+        # conn.sendall(data)
+        # time.sleep(2)
+        # continue
 
         send_chunk_size = 123
         sleep = 1.0 / (len(data) / send_chunk_size)
 
         while True:
 
-            for i in range(0, len(data), send_chunk_size):
+            for i in tqdm(range(0, len(data), send_chunk_size)):
                 # s.sendto(data[i:i + send_chunk_size], socket_addr)
                 conn.sendall(data[i:i + send_chunk_size])
                 time.sleep(sleep)

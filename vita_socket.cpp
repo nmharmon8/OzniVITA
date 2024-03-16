@@ -20,8 +20,8 @@
 
 class VitaStream {
 public:
-    VitaStream(int id, size_t max_packets = 1000000) : stream_id(id), max_packets(max_packets) {
-        packets.reserve(100000);
+    VitaStream(int id, size_t max_seconds = 30) : stream_id(id), max_seconds(max_seconds) {
+        packet_data.reserve(100000);
     }
 
     VitaStream(const VitaStream&) = delete;
@@ -34,29 +34,25 @@ public:
         if (packet.header.packet_type == VRT_PT_IF_CONTEXT) {
             context_packet = packet;
         } else {
-            packets.push_back(packet);
-            auto* bytePtr = static_cast<uint8_t*>(packet.body); // Convert void* to uint8_t*
-            std::vector<uint8_t> data = std::vector<uint8_t>(bytePtr, bytePtr + packet.words_body * 4);
-            packet_data.push_back(data);
+            // Given we don't know how much data we have without a sample rate we just wait until we have a context packet
+            if (_hasContextPacket()){
+                auto* bytePtr = static_cast<uint8_t*>(packet.body); // Convert void* to uint8_t*
+                packet_data.insert(packet_data.end(), bytePtr, bytePtr + packet.words_body * 4);
 
-            if (packets.size() > max_packets) {
-                packets.clear();
-                packet_data.clear();
-                std::cout << "C++ Dropped packets" << std::endl << std::flush;
+                if (_getSecondsOfData() > max_seconds) {
+                    packet_data.clear();
+                    std::cout << "C++ Dropped packets" << std::endl << std::flush;
+                }
             }
         }
     }
 
-    std::vector<std::vector<uint8_t>> getPacketData() {
+    std::vector<uint8_t> getPacketData() {
         std::lock_guard<std::mutex> lock(stream_mutex);
-        //Copy packet data for return and clear the packet data
-        // std::cout << "Packet size: " << packet_data.size() << std::endl;
-        std::vector<std::vector<uint8_t>> data(packet_data);
+        std::vector<uint8_t> data(packet_data);
         packet_data.clear();
-        packets.clear();
         return data;
     }
-
 
     int getStreamID() const {
         return stream_id;
@@ -64,17 +60,17 @@ public:
 
     int getSampleRate() const {
         std::lock_guard<std::mutex> lock(stream_mutex);
-        return 0 == context_packet.if_context.sample_rate ? 0 : context_packet.if_context.sample_rate;
+        return _getSampleRate();
     }
 
-    int getPacketCount() const {
+    float getSecondsOfData() const {
         std::lock_guard<std::mutex> lock(stream_mutex);
-        return packets.size();
+        return _getSecondsOfData();
     }
 
     bool hasContextPacket() const {
         std::lock_guard<std::mutex> lock(stream_mutex);
-        return context_packet.header.packet_type == VRT_PT_IF_CONTEXT;
+        return _hasContextPacket();
     }
 
     double getFrequency() const {
@@ -83,12 +79,41 @@ public:
     }
 
 private:
-    std::vector<vrt_packet> packets;
-    std::vector<std::vector<uint8_t>> packet_data;
+    std::vector<uint8_t> packet_data;
     int stream_id;
-    int max_packets;
+    int max_seconds;
     mutable std::mutex stream_mutex;
     vrt_packet context_packet;
+
+
+    bool _hasContextPacket() const {
+        return context_packet.header.packet_type == VRT_PT_IF_CONTEXT;
+    }
+
+    float _getSecondsOfData() const {
+        if (!_hasContextPacket()) {
+            return 0;
+        }
+        return packet_data.size() / _getSampleRate() / 4.0;
+    }
+
+    int _getSampleRate() const {
+        return 0 == context_packet.if_context.sample_rate ? 0 : context_packet.if_context.sample_rate;
+    }
+
+
+    int seconds_to_bytes(int seconds) {
+        // Don't keep data until we have a context packet
+        if (!_hasContextPacket()) {
+            return 0;
+        }
+
+        int sample_rate = _getSampleRate();
+        int bytes_per_sample = 4;
+        int bytes_per_second = sample_rate * bytes_per_sample;
+        std::cout << "Bytes per second: " << bytes_per_second << std::endl;
+        return seconds * bytes_per_second;
+    }
 };
 
 
@@ -353,7 +378,7 @@ class VitaSocket {
             data += "C++: Stream Count: " + std::to_string(streams.size()) + "\n";
             for (const auto& stream : streams) {
                 if (stream.second.getSampleRate() > 0){
-                    data += "   C++: Stream ID: " + std::to_string(stream.first) + " Sample Rate: " + std::to_string(stream.second.getSampleRate()) + " Packet Count: " + std::to_string(stream.second.getPacketCount()) + "\n";
+                    data += "   C++: Stream ID: " + std::to_string(stream.first) + " Sample Rate: " + std::to_string(stream.second.getSampleRate()) + " Seconds of Data: " + std::to_string(stream.second.getSecondsOfData()) + "\n";
                 }
             }
             std::cout << data << std::flush;
@@ -460,10 +485,10 @@ int main() {
     // run_tcp("127.0.0.1", 5002);
     // run_udp("127.0.0.1", 5002);
 
-    VitaSocket vita_socket(20000);
+    VitaSocket vita_socket(30);
 
     // vita_socket.run_udp("127.0.0.1", 5002);
-    vita_socket.run_tcp("127.0.0.1", 5002);
+    vita_socket.run_tcp("127.0.0.1", 5003);
 
 
     // Get the data every second
@@ -474,16 +499,16 @@ int main() {
         std::cout << "Stream IDs: " << std::endl;
         std::cout << std::flush;
         for (const auto& id : ids) {
-            std::cout << id << " " << std::endl;
+            std::cout << id << " " << std::endl << std::flush;
             // std::vector<std::vector<uint8_t>> data = getStream(id)->getPacketData();
             VitaStream* stream = vita_socket.getStream(id);
             if (stream == nullptr) {
                 continue;
             }
-            int num_packets = stream->getPacketCount();
-            std::cout << "Stream ID: " << id << " Packet Count: " << num_packets << std::endl;
-            std::vector<std::vector<uint8_t>> data = stream->getPacketData();
-            std::cout << "Data size: " << data.size() << std::endl;
+            float seconds_of_data = stream->getSecondsOfData();
+            std::cout << "Stream ID: " << id << " Seconds of data: " << seconds_of_data << std::endl;
+            std::vector<uint8_t> data = stream->getPacketData();
+            std::cout << "Data size bytes: " << data.size() << std::endl;
             // Flush the print buffer
             std::cout << std::flush;
         }
