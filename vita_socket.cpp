@@ -215,6 +215,47 @@ class VitaSocket {
 
             return 0;
         }
+        
+        int run_multicast(const char* group, int port) {
+            struct sockaddr_in servaddr;
+            int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+            if (sockfd < 0) {
+                throw std::runtime_error("socket creation failed");
+            }
+
+            int enable = 1;
+            // Allow multiple sockets to bind the same address/port
+            if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
+                throw std::runtime_error("setsockopt(SO_REUSEADDR) failed");
+            }
+
+            std::memset(&servaddr, 0, sizeof(servaddr));
+            servaddr.sin_family = AF_INET;
+            servaddr.sin_port = htons(port);
+            // For multicast, bind to INADDR_ANY
+            servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+            if (bind(sockfd, reinterpret_cast<const struct sockaddr *>(&servaddr), sizeof(servaddr)) < 0) {
+                throw std::runtime_error("bind failed");
+            }
+
+            // Join the multicast group
+            struct ip_mreq mreq;
+            std::memset(&mreq, 0, sizeof(mreq));
+            mreq.imr_multiaddr.s_addr = inet_addr(group); // Multicast group
+            mreq.imr_interface.s_addr = htonl(INADDR_ANY); // Default interface
+
+            if (setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, 
+                        reinterpret_cast<const char*>(&mreq), sizeof(mreq)) < 0) {
+                throw std::runtime_error("setsockopt(IP_ADD_MEMBERSHIP) failed");
+            }
+
+            // Start threads to receive and parse data as before
+            receiverThread = std::thread(&VitaSocket::receiveData, this, sockfd, servaddr);
+            parserThread = std::thread(&VitaSocket::parseData, this);
+
+            return 0;
+        }
 
 
 

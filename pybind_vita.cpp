@@ -33,7 +33,8 @@ PYBIND11_MODULE(vita_socket, m) {
         .def("getStream", &VitaSocket::getStream, py::return_value_policy::reference)
         .def("join", &VitaSocket::join)
         .def("run_tcp", &VitaSocket::run_tcp, py::arg("host"), py::arg("port"))
-        .def("run_udp", &VitaSocket::run_udp, py::arg("host"), py::arg("port"));
+        .def("run_udp", &VitaSocket::run_udp, py::arg("host"), py::arg("port"))
+        .def("run_multicast", &VitaSocket::run_multicast, py::arg("host"), py::arg("port"));
 
     // m.def("addPacketToStream", &addPacketToStream);
     // m.def("getStreamIDs", &getStreamIDs);
