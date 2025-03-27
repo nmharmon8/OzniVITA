@@ -7,6 +7,3 @@
 [submodule "RH/external/pybind11"]
 	path = RH/external/pybind11
 	url = https://github.com/pybind/pybind11.git
-[submodule "RH/external/VITA49"]
-	path = RH/external/VITA49
-	url = https://github.com/RedhawkSDR/VITA49.git
